@@ -1,0 +1,6 @@
+每个城市中一个阵营只可能有不超过1个knight
+
+10分钟时knight前进，command没有knight，之后50分钟内不考虑command的knight
+
+*knight[3]={white_NULL,red_knight,blue_knight}
+
