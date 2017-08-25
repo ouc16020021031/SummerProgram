@@ -1,506 +1,819 @@
-#include<iostream>
-#include<string>
+#include<cstring>
 #include<vector>
-#include<cstdio>
+#include<iostream>
+/***********value**define*******/
+#define morale_Hurrah 0.8
+#define morale_Defeate 0.2
+#define morale_Undefeate 0.2
+#define life_Reward 8
+
 using namespace std;
-enum Knight_name{dragon, ninja, iceman, lion, wolf};//武士名称
-enum Weapon_name{sword, bomb, arrow};//武器名称
-string Knight[5] = {"dragon", "ninja", "iceman", "lion", "wolf"};//武士名称，输出使用
-Knight_name Order[2][5] = {{iceman, lion, wolf, ninja, dragon},//制造顺序
-				   	   	   {lion, dragon, ninja, iceman, wolf}};
-string Color[2] = {"red", "blue"};//司令部颜色，输出使用
-string Weapons_[3] = {"sword", "bomb", "arrow"};//武器名称，输出使用
-int Attack_[5];//各武士初始攻击力
-int Loyal_reduce;//lion未杀死敌人所减少士气
-int Hour, Minute;//计时器
-int Total_Minutes;//终止时间
-int Life_Make[5];//制造各种武士所需生命元
-int arrow_attack;//arrow攻击力
-void Print_time(){//输出前面时间
-	cout.width(3); cout.fill('0');
-	cout << Hour << ':';cout.width(2);
-	cout << Minute << ' ';
-}
+
+enum timeline_value {MakeKnight, RunAway, SetOff, MakeLife, GetLife, Hurt, Use, Fight, ReportLife, ReportWeapon};
+enum knight_value {dragon, ninja, iceman, lion, wolf};
+enum weapon_value {sword, bomb, arrow};
+enum color_value {white, red, blue};
+int timeline[10] = {0, 5, 10, 20, 30, 35, 38, 40, 50, 55};
+int order[3][5] = {{0}, {iceman, lion, wolf, ninja, dragon}, { lion, dragon, ninja, iceman, wolf }};
+string knight_name[5] = {"dragon", "ninja", "iceman", "lion", "wolf"};
+string weapon_name[3] = {"sword", "bomb", "arrow"};
+string color_name[3] = {"white", "red", "blue"};
+
+int attack_knight[5];
+int life_make[5];
+int hour, minute, total_minute;
+int total_city, total_life;
+int arrow_attack;
+int loyal_reduce;
+
+class Knight;//声明
 class City;
 class Command;
-class Weapon{//武器
-private:
-	int name, sword_attack, arrow_usetime;//武器名称，sword攻击力，arrow剩余使用次数
-public:
-	Weapon(int i, int satt):name(i), sword_attack(satt),arrow_usetime(3){}//武器状态初始化
-	bool sword_dull(){//sword变钝
-		sword_attack = int (sword_attack * 0.8);
-		return sword_attack;
+class Weapon;
+
+void print_time();
+vector<City> city;
+
+class Command {
+  public:
+	int life;
+	int number;
+	int name_value;
+	bool weather_enemy;
+	Knight* knight;
+	Knight* number_enemy[2];
+	string name;
+	Command(int color_, int life_) {
+		number_enemy[0] = NULL;
+		number_enemy[1] = NULL;
+		weather_enemy = false;
+		knight = NULL;
+		number = 1;
+		life = life_;
+		name_value = color_;
+		name = color_name[name_value];
 	}
-	int &usetime(){return arrow_usetime;}
-	int sw_atk(){return sword_attack;}
+	void min_0();
+	void min_10();
+	void min_50() {
+		cout << life << " elements in " << name << " headquarter" << endl;
+	}
+} *command[3];
+
+class Weapon {
+  public:
+	int attack;
+	int attack_times;
+	string name;
+	int name_value;
+	Weapon(int number, int knight_attack) {
+		name_value = number;
+		name = weapon_name[name_value];
+		switch(name_value) {
+		case sword:
+			attack = knight_attack / 5;
+			break;
+		case bomb:
+			break;
+		case arrow:
+			attack_times = 3;
+			break;
+		}
+	}
 };
-class Warrior{//士兵
-private:
-	int Num, Life, Attack, Loyal, Step, l_life;//编号，生命力，攻击力，忠诚度，步数
-	Knight_name name;//武士名称
-	double Morale;//士气
-	City* City_Belong_to;//所属城市
-	Command* Command_Belong_to;//所属司令部
-	bool If_win,If_kill;//战斗是否获胜，是否杀死敌人
-	Weapon* weapon[3];//装备
-public:
-	Warrior(int n, Knight_name &name_, int &life, int &t_life,Command *COMD){//初始化士兵属性
-		Num = n; name = name_; Life = life; Attack = Attack_[name]; Step = 0; l_life = 0;
-		weapon[0] = NULL; weapon[1] = NULL; weapon[2] = NULL;
-		switch(name){
-			case dragon:case iceman: weapon[Num % 3] = new Weapon(Num % 3, int(Attack_[name] * 0.2)); break;
-			case ninja: weapon[Num % 3] = new Weapon(Num % 3, int(Attack_[name] * 0.2));
-						weapon[(Num + 1) % 3] = new Weapon((Num + 1) % 3, int(Attack_[name] * 0.2)); break;
-			default: break;
-		};
-		if (weapon[sword]) if (!weapon[sword]->sw_atk()) weapon[sword] = NULL;//若初始武器攻击为0，则delete
-		Morale = double(t_life) / double(Life);
-		Loyal = t_life; If_win = false; If_kill = false;
-		City_Belong_to = NULL; Command_Belong_to = COMD;
-		cout << Knight[name] << ' ' << Num << " born\n";
-		if (name == dragon){
+
+class Knight {
+  public:
+	int loyal;
+	int life;
+	int attack;
+	int number;
+	int color;
+	int twice_flag;
+	int attack_increase;
+	int life_reduce;
+	bool active_flag;
+	bool kill_flag;
+	bool win_flag;
+	bool fight_flag;
+	bool counterattack_flag;
+	double morale;
+	string name;
+	City* city_belong;
+	Command* command_belong;
+	Weapon* weapon[3];
+	Weapon* weapon_[3];
+	int name_value;
+	Knight(int color_, int number_) {
+		win_flag = false;
+		kill_flag = false;
+		active_flag = false;
+		fight_flag = false;
+		counterattack_flag = true;
+		weapon[0] = NULL;
+		weapon[1] = NULL;
+		weapon[2] = NULL;
+		weapon_[0] = NULL;
+		weapon_[1] = NULL;
+		weapon_[2] = NULL;
+		city_belong = NULL;
+		morale = 0;
+		color = color_;
+		number = number_;
+		name_value = order[color][(number - 1) % 5];
+		life = life_make[name_value];
+		attack = attack_knight[name_value];
+		name = knight_name[name_value];
+		command[color]->life -= life;
+		switch(name_value) {
+		case dragon:
+			weapon[number % 3] = new Weapon(number % 3, attack_knight[name_value]);
+			morale = command[color]->life / (double)life_make[name_value];
+			break;
+		case ninja:
+			counterattack_flag = false;
+			weapon[number % 3] = new Weapon(number % 3, attack_knight[name_value]);
+			weapon[(number + 1) % 3] = new Weapon((number + 1) % 3, attack_knight[name_value]);
+			break;
+		case iceman:
+			twice_flag = 0;
+			life_reduce = 9;
+			attack_increase = 20;
+			weapon[number % 3] = new Weapon(number % 3, attack_knight[name_value]);
+			break;
+		case lion:
+			loyal = command[color]->life;
+			break;
+		case wolf:
+			break;
+		}
+		if (weapon[sword]) if (!weapon[sword]->attack) weapon[sword] = NULL;
+		cout << color_name[color] << ' ' << name << ' ' << number << " born\n";
+		if (name_value == dragon) {
 			cout << "Its morale is ";
 			cout.precision(2);
-			cout << fixed << Morale << endl;
+			cout << fixed << morale << endl;
 		}
-		if (name == lion){cout << "Its loyalty is " << Loyal << endl;}
-	}
-	bool &IF_win(){return If_win;}
-	int life(){return Life;}
-	bool Minute_5();//lion是否逃跑 输出
-	void Minute_10(bool );//武士前进输出
-	void Minute_30(int );//获取城市生命元及输出
-	void arrow_shot();//使用弓箭输出
-	void Be_shoted();//被射中处理及输出
-	void Change_City(City * Cp){City_Belong_to = Cp;}
-	void Morale_Change(){If_win ? Morale += 0.2: Morale -=0.2;}
-	bool weapon_(Weapon_name name){return weapon[name];}
-	void Use_bomb(Warrior *);//使用bomb输出
-	int fight(Warrior* Wp){//假设战斗，判断是否会获胜
-		if (Life > 0 and Wp->Life > 0){
-			int swatk = 0;
-			if (weapon[sword]) swatk = weapon[sword]->sw_atk();
-			if (Wp->Life - Attack- swatk > 0){
-				if (Wp->name == ninja) return 0;
-				else{
-					int E_swatk = 0;
-					if (Wp->weapon[sword]) E_swatk = (Wp->weapon[sword])->sw_atk();
-					if (Life - (Wp->Attack / 2) - E_swatk > 0) return 0;
-					else return -1;
-				}
-			}else return 1;
+		if (name_value == lion) {
+			cout << "Its loyalty is " << loyal << endl;
 		}
-		return 0;
 	}
-	bool bomb(Warrior *, int);//判断是否使用bomb
-	void Fight(Warrior *);//武士战斗处理及输出
-	void Dead();//武士死亡输出
-	void account(Warrior * Wp){//部分战后处理
-		If_win = true;
-		if(If_kill) {Wp->Dead();If_kill = false;}
-		if (Wp->name == lion) Life += Wp->l_life;
-		if (name == wolf)
-			for (int i = 0; i < 3; ++i)
-				if (Wp->weapon[i] and !weapon[i]){
-					weapon[i] = Wp->weapon[i];
-					Wp->weapon[i] = NULL;
-				}
-		Morale_Change();
-	}
-	void Reward();//战胜后获取奖励
-	void ADD(int);//所属司令部增加生命元
-	void Loyal_Reduce(){Loyal -= Loyal_reduce;}
-	void Report_weapon();//报告武器使用情况
-	~Warrior(){
+	~Knight() {
 		for (int i = 0; i < 3; ++i)
 			if (weapon[i]) delete weapon[i];
 	}
+	bool lion_run() {
+		if(loyal <= 0)return true;
+		else return false;
+	}
+	bool killed(City* city);
+	bool active_attack(Knight* enemy, City* city) ;
+	bool counterattack(Knight* enemy, City* city) ;
+	bool yell(int city_number) ;
+	int min_55();
 };
-class City{
-private:
-	int Number, Life, Flag, Flag_G[2];//城市编号，生命元，旗帜，各方士兵连续胜利场次
-	Warrior *Warrior_In_City[2];
-public:
-	int Num(){return Number;}
-	int Life_(){return Life;}
-	City(int N){
-		Number = N; Life = 0; Flag = -1;//-1 表示无旗城市
-		Warrior_In_City[0] = NULL; Flag_G[0] = 0;
-		Warrior_In_City[1] = NULL; Flag_G[1] = 0;
+
+class City {
+  public:
+	int flag;
+	int win[2];
+	int life;
+	int number;
+	Knight* knight_temp[3];
+	Knight* knight_in_city[3];
+	City(int number_) {
+		life = 0;
+		flag = white;
+		win[0] = white;
+		win[1] = white;
+		number = number_;
+		knight_temp[white] = NULL;
+		knight_temp[red] = NULL;
+		knight_temp[blue] = NULL;
+		knight_in_city[white] = NULL;
+		knight_in_city[red] = NULL;
+		knight_in_city[blue] = NULL;
 	}
-	void Minute_5(){//处理逃跑lion
-		for(int i = 0; i < 2; ++i)
-			if(Warrior_In_City[i]) if (Warrior_In_City[i]->Minute_5()){
-				delete Warrior_In_City[i]; Warrior_In_City[i] = NULL;
-			}
+	void min_5();
+	void min_20() {
+		life += 10;
 	}
-	void Move(City* Cp, int i){//warrior前进
-		Warrior_In_City[i] = Cp->Warrior_In_City[i];
-		if(Warrior_In_City[i]) Warrior_In_City[i]->Change_City(this);
-	}
-	void Move(Command *, int);//warrior进入敌方司令部
-	void Move(Warrior *Wp, int i){//warrior从command进入city
-		Warrior_In_City[i] = Wp;
-		if (Warrior_In_City[i]) Warrior_In_City[i]->Change_City(this);
-	}
-	bool If_exist(int i){return Warrior_In_City[i];}
-	void Minute_10(){//warrior前进输出
-		if (Warrior_In_City[0]) Warrior_In_City[0]->Minute_10(false);
-		if (Warrior_In_City[1]) Warrior_In_City[1]->Minute_10(false);
-	}
-	void Add_Life(){Life += 10;}
-	void Minute_30(){//城内单独warrior获取生命元
-		for (int i = 0; i < 2; ++i)
-		if ((Warrior_In_City[i]) and (!Warrior_In_City[1-i])){
-			Warrior_In_City[i]->Minute_30(Life);
-			Life = 0; break;
-		}
-	}
-	void Minute_35(City* Cp[]){//处理arrow事件
-		for (int j = 0; j < 2; ++j)
-			if (Warrior_In_City[j]) if (Warrior_In_City[j]->weapon_(arrow))
-				if (Cp[1-j]) if ((Cp[1-j]->Warrior_In_City[1-j])){
-					Warrior_In_City[j]->arrow_shot();
-					Cp[1-j]->Warrior_In_City[1-j]->Be_shoted();
-				}
-	}
-	void Minute_38(){//处理bomb事件，顺带处理35分钟时城市中两只warrior均被被射死的情况
-		if (Warrior_In_City[0] and Warrior_In_City[1]){
-			bool p =false;
-			for (int i = 0; i < 2; ++i)
-				if (Warrior_In_City[i]->weapon_(bomb)){
-					if (Flag == -1) p = Warrior_In_City[i]->bomb(Warrior_In_City[1-i], Number);
-					else p = Warrior_In_City[i]->bomb(Warrior_In_City[1-i], Flag+1);
-					if (p){
-						delete Warrior_In_City[0]; Warrior_In_City[0] = NULL;
-						delete Warrior_In_City[1]; Warrior_In_City[1] = NULL;
-						break;
-					}
-				}
-			if (!p and Warrior_In_City[0]->life() <= 0 and Warrior_In_City[1]->life() <= 0){
-				delete Warrior_In_City[0]; Warrior_In_City[0] = NULL;
-				delete Warrior_In_City[1]; Warrior_In_City[1] = NULL;
-			}
-		}
-	}
-	void Battle(){//战斗及输出，不进行生命元奖励、获取处理
-		if (Warrior_In_City[0] and Warrior_In_City[1]){
-			if (Flag == -1){
-				if (Number % 2) Warrior_In_City[0]->Fight(Warrior_In_City[1]);
-				else Warrior_In_City[1]->Fight(Warrior_In_City[0]);
-			}else
-				Warrior_In_City[Flag]->Fight(Warrior_In_City[1-Flag]);
-		}
-	}
-	void Flag_Set(int i){//战斗后旗帜设置
-		if (i == -1){Flag_G[0] = 0; Flag_G[1] = 0;}
-		else{
-			++Flag_G[i]; Flag_G[1-i] = 0;
-			if (Flag_G[i] == 2 and Flag != i){
-				Flag = i;
-				Print_time();
-				cout << Color[i] << " flag raised in city " << Number << endl;}
-		}
-	}
-	void Reward(int i){if(Warrior_In_City[i]) Warrior_In_City[i]->Reward();}
-	void Warrior_report(int i){if(Warrior_In_City[i]) Warrior_In_City[i]->Report_weapon();}
-	void Win_get(){//奖励获胜士兵生命元
-		for (int i = 0; i < 2; ++i)
-			if (Warrior_In_City[i]){
-				if (Warrior_In_City[i]->IF_win()){
-					Warrior_In_City[i]->ADD(Life);
-					Life = 0; Warrior_In_City[i]->IF_win() = false;
-				}else if (Warrior_In_City[i]->life() <=0){
-					delete Warrior_In_City[i];
-					Warrior_In_City[i] = NULL;
-				}
-			}
-	}
+	int min_30();
+	void min_35();
+	void min_38();
+	void min_40();
 };
-class Command{
-private:
-	int Total_Life, Knights_Num, Colour, Enemy_Enter;//生命元，造士兵数量，command颜色，有多少敌人进入
-	bool Weather_Enter;//是否有敌人进入
-	Warrior* Enemys[2];//进入的敌人
-	Warrior* Knight;//warrior
-public:
-	int colour(){return Colour;}
-	string colour(bool p){return p? Color[Colour]: Color[1-Colour];}
-	Command(int TLife, int col){
-		Total_Life = TLife;Colour = col;
-		Knights_Num = 0;
-		Knight = NULL; Enemy_Enter = 0;
-		Weather_Enter = false;
-		Enemys[0] = NULL; Enemys[1] = NULL;
-	}
-	void Minute_0(){//制造warrior及输出
-		if (Total_Life >= Life_Make[Order[Colour][Knights_Num % 5]]){
-			Total_Life -= Life_Make[Order[Colour][Knights_Num % 5]];
-			Print_time();
-			cout << Color[Colour] << ' ';
-			Knight = new Warrior(Knights_Num+1, Order[Colour][Knights_Num % 5], Life_Make[Order[Colour][Knights_Num% 5]], Total_Life, this);
-			Knights_Num++;
+
+bool Knight::killed(City* city) {
+	if(life <= 0) {
+		print_time();
+		cout << color_name[color] << ' ' << name << ' ' << number << " was killed in city " << city->number << endl;
+		return true;
+	} else return false;
+}
+
+bool Knight::active_attack(Knight* enemy, City* city) {
+	fight_flag = true;
+	int temp = attack;
+	if(weapon[sword]) {
+		temp += weapon[sword]->attack;
+		weapon[sword]->attack *= 0.8;
+		if(weapon[sword]->attack == 0) {
+			delete weapon[sword];
+			weapon[sword] = NULL;
 		}
 	}
-	void Minute_5(){//处理逃跑lion
-		if (Knight) if (Knight->Minute_5()){delete Knight; Knight = NULL;}
-	}
-	void Move(City* Cp, int i){Cp->Move(Knight, i); Knight = NULL;}//warrior走出command
-	void Enemy_Move_In(Warrior* enemy){//敌方warrior进入
-		Enemys[Enemy_Enter] = enemy;
-		Weather_Enter = true;
-		++Enemy_Enter;
-	}
-	void Minute_10(){//敌方warrior进入输出
-		if (Weather_Enter){
-			Enemys[Enemy_Enter-1]->Minute_10(true);
-			Weather_Enter = false;
+	enemy->life -= temp;
+	print_time();
+	cout << color_name[color] << ' ' << name << ' ' << number << " attacked " << color_name[enemy->color] << ' ' << enemy->name << ' ' << enemy->number << " in city " << city->number << " with " << life << " elements and force " << attack << endl;
+	if(enemy->killed(city)) {
+		if(name_value == wolf) {
+			if(enemy->weapon[arrow] && weapon[arrow] == NULL) {
+				weapon[arrow] = enemy->weapon[arrow];
+				enemy->weapon[arrow] = NULL;
+			}
+			if(enemy->weapon[bomb] && weapon[bomb] == NULL) {
+				weapon[bomb] = enemy->weapon[bomb];
+				enemy->weapon[bomb] = NULL;
+			}
+			if(enemy->weapon[sword] && weapon[sword] == NULL) {
+				weapon[sword] = enemy->weapon[sword];
+				enemy->weapon[sword] = NULL;
+			}
 		}
-	}
-	bool If_occupied(){//command是否被占领
-		if (Enemy_Enter == 2){
-			Print_time();
-			cout << Color[Colour] << " headquarter was taken\n";
-			return true;
-		}
+		delete enemy;
+		city->knight_in_city[enemy->color] = NULL;
+		return true;
+	} else {
+		if(name_value == lion)loyal -= loyal_reduce;
 		return false;
 	}
-	void Minute_30(int Add_life){Total_Life += Add_life;}
-	int &Life(){return Total_Life;}
-	void Report_life(){//command报告生命元
-		Print_time();
-		cout << Total_Life << " elements in " << Color[Colour] << " headquarter\n";
-	}
-	void Report(){if (Enemy_Enter) Enemys[Enemy_Enter-1]->Report_weapon();}//已进入command的warrior仍要report
-	~Command(){
-		if (Knight) delete Knight;
-		if (Enemys[0]) delete Enemys[0];
-		if (Enemys[1]) delete Enemys[1];
-	}
-};
-void Game_Start(){
-	int times = 0;
-	cin >> times;
-	for (int t = 0; t < times; ++t){
-		int M, N;//初始command生命元，城市数量
-		cin >> M >> N >> arrow_attack >> Loyal_reduce >> Total_Minutes;
-		Command COM[2] = {Command(M,0),Command(M,1)};
-		vector<City> Citys;
-		for (int i = 0; i < N; ++i){
-			City temp(i + 1);
-			Citys.push_back(temp);
-		}
-		for (int i = 0; i < 5; ++i)
-			cin >> Life_Make[i];
-		for (int i = 0; i < 5; ++i)
-			cin >> Attack_[i];
-		cout << "Case " << t + 1 << ":\n";
-		Hour = 0; Minute = 0;//计时开始
-		while(Hour * 60 <= Total_Minutes){
-			COM[0].Minute_0(); COM[1].Minute_0(); Minute = 5;//第0分钟
-			if (Hour * 60 + Minute > Total_Minutes) break;//第5分钟
-			else {
-				COM[0].Minute_5();
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)
-					(*i).Minute_5();
-				COM[1].Minute_5();
-				Minute = 10;
-			}
-			if (Hour * 60 + Minute > Total_Minutes) break;//第10分钟
-			else {
-				if (Citys[0].If_exist(1)) Citys[0].Move(&COM[0], 1);//warrior前进
-				for (int i = 0; i < N - 1; ++i)
-					Citys[i].Move(&Citys[i+1], 1);
-				COM[1].Move(&Citys[N - 1], 1);
-				if (Citys[N-1].If_exist(0)) Citys[N-1].Move(&COM[1], 0);
-				for (int i = N - 1; i > 0; --i)
-					Citys[i].Move(&Citys[i-1], 0);
-				COM[0].Move(&Citys[0], 0);
-				COM[0].Minute_10();//warrior移动输出
-				bool p = COM[0].If_occupied();
-				for (int i = 0; i < N; ++i) Citys[i].Minute_10();
-				COM[1].Minute_10();
-				if (p + COM[1].If_occupied()) break;
-			}
-			Minute = 20;
-			if (Hour * 60 + Minute > Total_Minutes) break;//第20分钟
-			else
-				for (int i = 0; i < N; ++i) Citys[i].Add_Life();
-			Minute = 30;
+}
 
-			if (Hour * 60 + Minute > Total_Minutes) break;//第30分钟
-			else
-				for (int i = 0; i < N; ++i) Citys[i].Minute_30();
-			Minute = 35;
-			if (Hour * 60 + Minute > Total_Minutes) break;//第35分钟
-			else
-				if (N > 1){//city数大于1时才会发生arrow事件
-					City* Cp[2] = {};
-					Cp[0] = NULL; Cp[1] = &Citys[1];
-					Citys[0].Minute_35(Cp);
-					for (int i = 1; i < N-1; ++i){
-						Cp[0] = &Citys[i-1]; Cp[1] = &Citys[i+1];
-						Citys[i].Minute_35(Cp);
-					}
-					Cp[0] = &Citys[N-2]; Cp[1] = NULL;
-					Citys[N-1].Minute_35(Cp);
+bool Knight::counterattack(Knight* enemy, City* city) {
+	if(counterattack_flag) {
+		fight_flag = true;
+		int temp = attack / 2;
+		if(weapon[sword]) {
+			temp += weapon[sword]->attack;
+			weapon[sword]->attack *= 0.8;
+			if(weapon[sword]->attack == 0) {
+				delete weapon[sword];
+				weapon[sword] = NULL;
+			}
+		}
+		enemy->life -= temp;
+		print_time();
+		cout << color_name[color] << ' ' << name << ' ' << number << " fought back against " << color_name[enemy->color] << ' ' << enemy->name << ' ' << enemy->number << " in city " << city->number << endl;
+		if(enemy->killed(city)) {
+			if(name_value == wolf) {
+				if(enemy->weapon[arrow] && weapon[arrow] == NULL) {
+					weapon[arrow] = enemy->weapon[arrow];
+					enemy->weapon[arrow] = NULL;
 				}
-			Minute = 38;
-			if (Hour * 60 + Minute > Total_Minutes) break;//第38分钟
-			else
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)
-					(*i).Minute_38();
-			Minute = 40;
-			if (Hour * 60 + Minute > Total_Minutes) break;//第40分钟
-			else{
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)//战斗及输出
-					(*i).Battle();
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)//奖励生命元
-					(*i).Reward(0);
-				for (vector<City>::reverse_iterator i = Citys.rbegin(); i != Citys.rend(); ++i)
-					(*i).Reward(1);
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)//获取city生命元
-					(*i).Win_get();
+				if(enemy->weapon[bomb] && weapon[bomb] == NULL) {
+					weapon[bomb] = enemy->weapon[bomb];
+					enemy->weapon[bomb] = NULL;
+				}
+				if(enemy->weapon[sword] && weapon[sword] == NULL) {
+					weapon[sword] = enemy->weapon[sword];
+					enemy->weapon[sword] = NULL;
+				}
 			}
-			Minute = 50;
-			if (Hour * 60 + Minute > Total_Minutes) break;//第50分钟
-			else
-				COM[0].Report_life();COM[1].Report_life();
-			Minute = 55;
-			if (Hour * 60 + Minute > Total_Minutes) break;//第55分钟
-			else{
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)
-					(*i).Warrior_report(0);
-				COM[1].Report();COM[0].Report();
-				for (vector<City>::iterator i = Citys.begin(); i != Citys.end(); ++i)
-					(*i).Warrior_report(1);
-			}
-			Minute = 0;
-			Hour++;
+			delete enemy;
+			city->knight_in_city[enemy->color] = NULL;
+			return true;
+		} else {
+			if(name_value == lion)loyal -= loyal_reduce;
+			return false;
+		}
+	} else return false;
+}
+
+bool Knight::yell(int city_number) {
+	if(morale > 0.8) {
+		print_time();
+		cout << color_name[color] << ' ' << name << ' ' << number << " yelled in city " << city_number << endl;
+		return true;
+	} else return false;
+}
+
+void print_time() { //输出前面时间
+	cout.width(3);
+	cout.fill('0');
+	cout << hour << ':';
+	cout.width(2);
+	cout << minute << ' ';
+}
+
+void Command::min_0() {//make knight
+	if(life >= life_make[order[name_value][(number - 1) % 5]]) {
+		print_time();
+		knight = new Knight(name_value, number);
+		number++;
+	}
+}
+
+void City::min_5() {//lion run away
+	int i = white;
+	while(i++ < 2) {
+		if(knight_in_city[i] && knight_in_city[i]->name_value == lion && knight_in_city[i]->lion_run()) {
+			print_time();
+			cout << color_name[knight_in_city[i]->color] << ' ' << knight_in_city[i]->name << ' ' << knight_in_city[i]->number << " ran away" << endl;
+			delete knight_in_city[i];
+			knight_in_city[i] = NULL;
 		}
 	}
 }
-int main(){
-//	freopen("d:\\anser.txt", "w", stdout);
-	Game_Start();
-//	fclose(stdout);
+
+void min_10() {//knight set off
+	//red
+	city.begin()->knight_temp[red] = command[red]->knight;
+	command[red]->knight = NULL;
+	//city
+	vector<City>::iterator it = city.begin();
+	while(it != city.end()) {
+		int i = white;
+		while(i++ < 2) {
+			if(it->knight_in_city[i]) {
+				if(it->number != total_city){cout<<"!!!!!"<<endl;
+				(it + 1)->knight_temp[i] = it->knight_in_city[i];}
+				else {cout<<"====="<<endl;
+					if(command[blue]->weather_enemy) {
+						command[blue]->number_enemy[1] = it->knight_in_city[i];
+						print_time();
+						cout << color_name[it->knight_in_city[i]->color] << ' ' << it->knight_in_city[i]->name << ' ' << it->knight_in_city[i]->number << " reached blue headquarter with " << it->knight_in_city[i]->life << " elements and force " << it->knight_in_city[i]->attack << endl;
+						print_time();
+						cout << "blue headquarter was taken" << endl;
+					} else command[blue]->number_enemy[0] = it->knight_in_city[i];
+					it->knight_in_city[i] = NULL;
+				}
+				if(it->number != 1)
+					(it - 1)->knight_temp[i] = it->knight_in_city[i];
+				else {
+					if(command[red]->weather_enemy) {
+						command[red]->number_enemy[1] = it->knight_in_city[i];
+						print_time();
+						cout << color_name[it->knight_in_city[i]->color] << ' ' << it->knight_in_city[i]->name << ' ' << it->knight_in_city[i]->number << " reached red headquarter with " << it->knight_in_city[i]->life << " elements and force " << it->knight_in_city[i]->attack << endl;
+						print_time();
+						cout << "red headquarter was taken" << endl;
+					} else command[red]->number_enemy[0] = it->knight_in_city[i];
+					it->knight_in_city[i] = NULL;
+				}
+			}
+		}
+		it++;
+	}
+	it = city.begin();
+	while(it != city.end()) {
+		int i = white;
+		while(i++ < 2) {
+			it->knight_in_city[i] = it->knight_temp[i];
+			it->knight_temp[i] = NULL;
+			if(it->knight_in_city[i]) {
+				print_time();
+				cout << color_name[i] << ' ' << it->knight_in_city[i]->name << ' ' << it->knight_in_city[i]->number << " marched to city " << it->number << " with " << it->knight_in_city[i]->life << " elements and force " << it->knight_in_city[i]->attack << endl;
+			}
+		}
+		it++;
+	}
+	//blue
+	(city.end() - 1)->knight_in_city[blue] = command[blue]->knight;
+	command[blue]->knight = NULL;
+	if((city.end() - 1)->knight_in_city[blue]) {
+		print_time();
+		cout << "blue " << (city.end() - 1)->knight_in_city[blue]->name << ' ' << (city.end() - 1)->knight_in_city[blue]->number << " marched to city " << total_city << " with " << (city.end() - 1)->knight_in_city[blue]->life << " elements and force " << (city.end() - 1)->knight_in_city[blue]->attack << endl;
+	}
+}
+
+int City::min_30() {
+	if(knight_in_city[red] && knight_in_city[blue] == NULL) {
+		command[red]->life += life;
+		print_time();
+		cout << "red " << knight_in_city[red]->name << ' ' << knight_in_city[red]->number << " earned " << life << " elements for his headquarter" << endl;
+		life = 0;
+		return 0;
+	}
+	if(knight_in_city[blue] && knight_in_city[red] == NULL) {
+		command[blue]->life += life;
+		print_time();
+		cout << "blue " << knight_in_city[blue]->name << ' ' << knight_in_city[blue]->number << " earned " << life << " elements for his headquarter" << endl;
+		life = 0;
+		return 0;
+	}
+}
+
+void arrow_hurt(int number, Knight* who_arrow, bool again) {
+	int i = white;
+	vector<City>::iterator it = city.begin() + number;
+	while(i++ < 2) {
+		if(it->knight_in_city[i] && it->knight_in_city[i]->color != who_arrow->color) {
+			if((it->knight_in_city[i]->life -= arrow_attack) <= 0) {
+				print_time();
+				cout << color_name[who_arrow->color] << ' ' << who_arrow->name << ' ' << who_arrow->number << " shot and killed " << color_name[it->knight_in_city[i]->color] << ' ' << it->knight_in_city[i]->name << ' ' << it->knight_in_city[i]->number << endl;
+				if(again && it->knight_in_city[i]->weapon[arrow]) {
+					if(i == red)arrow_hurt(number, it->knight_in_city[i], 0);
+					if(i == blue)arrow_hurt(number - 1, it->knight_in_city[i], 0);
+				}
+				if(i == red && it->knight_in_city[blue]) {
+					if(it->knight_in_city[blue]->name_value == wolf) {
+						if(it->knight_in_city[i]->weapon[arrow] && it->knight_in_city[blue]->weapon[arrow] == NULL) {
+							it->knight_in_city[blue]->weapon_[arrow] = it->knight_in_city[i]->weapon[arrow];
+							it->knight_in_city[i]->weapon[arrow] = NULL;
+						}
+						if(it->knight_in_city[i]->weapon[bomb] && it->knight_in_city[blue]->weapon[bomb] == NULL) {
+							it->knight_in_city[blue]->weapon_[bomb] = it->knight_in_city[i]->weapon[bomb];
+							it->knight_in_city[i]->weapon[bomb] = NULL;
+						}
+						if(it->knight_in_city[i]->weapon[sword] && it->knight_in_city[blue]->weapon[sword] == NULL) {
+							it->knight_in_city[blue]->weapon_[sword] = it->knight_in_city[i]->weapon[sword];
+							it->knight_in_city[i]->weapon[sword] = NULL;
+						}
+					}
+					it->knight_in_city[blue]->win_flag = true;
+					it->knight_in_city[blue]->fight_flag = true;
+				}
+				if(i == blue && it->knight_in_city[red]) {
+					if(it->knight_in_city[red]->name_value == wolf) {
+						if(it->knight_in_city[i]->weapon[arrow] && it->knight_in_city[red]->weapon[arrow] == NULL) {
+							it->knight_in_city[red]->weapon_[arrow] = it->knight_in_city[i]->weapon[arrow];
+							it->knight_in_city[i]->weapon[arrow] = NULL;
+						}
+						if(it->knight_in_city[i]->weapon[bomb] && it->knight_in_city[red]->weapon[bomb] == NULL) {
+							it->knight_in_city[red]->weapon_[bomb] = it->knight_in_city[i]->weapon[bomb];
+							it->knight_in_city[i]->weapon[bomb] = NULL;
+						}
+						if(it->knight_in_city[i]->weapon[sword] && it->knight_in_city[red]->weapon[sword] == NULL) {
+							it->knight_in_city[red]->weapon_[sword] = it->knight_in_city[i]->weapon[sword];
+							it->knight_in_city[i]->weapon[sword] = NULL;
+						}
+					}
+					it->knight_in_city[red]->win_flag = true;
+					it->knight_in_city[red]->fight_flag = true;
+				}
+				delete it->knight_in_city[i];
+				it->knight_in_city[i] = NULL;
+			} else {
+				print_time();
+				cout << color_name[who_arrow->color] << ' ' << who_arrow->name << ' ' << who_arrow->number << " shot" << endl;
+			}
+			if(--(who_arrow->weapon[arrow]->attack_times) == 0) {
+				delete who_arrow->weapon[arrow];
+				who_arrow->weapon[arrow] = NULL;
+			}
+		}
+	}
+}
+
+void City::min_35() {
+	int i = white;
+	while(i++ < 2) {
+		if(knight_in_city[i] && knight_in_city[i]->weapon[arrow]) {
+			int temp;
+			if(number == 1 && knight_in_city[i]->color == blue || number == total_city && knight_in_city[i]->color == red)continue;
+			if(i == red)temp = number + 1;
+			if(i == blue)temp = number - 1;
+			arrow_hurt(temp - 1, knight_in_city[i], 1);
+		}
+	}
+}
+
+void bomb_use(Knight* who_bomb, Knight* enemy) {
+	print_time();
+	cout << color_name[who_bomb->color] << ' ' << who_bomb->name << ' ' << who_bomb->number << " used a bomb and killed " << color_name[enemy->color] << ' ' << enemy->name << ' ' << enemy->number << endl;
+	delete who_bomb;
+	delete enemy;
+}
+
+void City::min_38() {
+	if(knight_in_city[red] && knight_in_city[blue] && (knight_in_city[blue]->weapon[bomb] || knight_in_city[red]->weapon[bomb])) {
+		if(flag == red || number % 2)knight_in_city[red]->active_flag = true;
+		else knight_in_city[blue]->active_flag = true;
+		int red_half_attack, blue_half_attack;
+		int red_all_attack, blue_all_attack;
+		if(knight_in_city[red]->weapon[sword]) {
+			red_half_attack = knight_in_city[red]->weapon[sword]->attack + knight_in_city[red]->attack / 2;
+			red_all_attack = knight_in_city[red]->weapon[sword]->attack + knight_in_city[red]->attack;
+		} else {
+			red_half_attack = knight_in_city[red]->attack / 2;
+			red_all_attack = knight_in_city[red]->attack;
+		}
+		if(knight_in_city[blue]->weapon[sword]) {
+			blue_half_attack = knight_in_city[blue]->weapon[sword]->attack + knight_in_city[blue]->attack / 2;
+			blue_all_attack = knight_in_city[blue]->weapon[sword]->attack + knight_in_city[blue]->attack;
+		} else {
+			blue_all_attack = knight_in_city[blue]->attack;
+			blue_half_attack = knight_in_city[blue]->attack / 2;
+		}
+		if(knight_in_city[red]->weapon[bomb]) {
+			if((knight_in_city[red]->active_flag && knight_in_city[blue]->name_value != ninja && blue_half_attack > knight_in_city[red]->life) || ( blue_all_attack > knight_in_city[red]->life)) {
+				bomb_use(knight_in_city[red], knight_in_city[blue]);
+				knight_in_city[red] = NULL;
+				knight_in_city[blue] = NULL;
+			}
+		} else {
+			if((knight_in_city[blue]->active_flag && knight_in_city[red]->name_value != ninja && red_half_attack > knight_in_city[blue]->life) || (red_all_attack > knight_in_city[blue]->life)) {
+				bomb_use(knight_in_city[blue], knight_in_city[red]);
+				knight_in_city[blue] = NULL;
+				knight_in_city[red] = NULL;
+			}
+		}
+		if(knight_in_city[red]) {
+			knight_in_city[red]->active_flag = false;
+			knight_in_city[blue]->active_flag = false;
+		}
+	}
+}
+
+void City::min_40() {
+	int temp, ftemp;
+	if(flag == red || number % 2) {
+		temp = red;
+		ftemp = blue;
+	} else {
+		temp = blue;
+		ftemp = red;
+	}
+	if(knight_in_city[temp] && knight_in_city[ftemp]) {
+		if(knight_in_city[temp]->active_attack(knight_in_city[ftemp], this)) {
+			knight_in_city[temp]->win_flag = true;
+		} else if(knight_in_city[ftemp]->counterattack(knight_in_city[temp], this)) {
+			knight_in_city[ftemp]->win_flag = true;
+		}
+		knight_in_city[temp]->yell(number);
+	}
+	if(knight_in_city[temp] == NULL && knight_in_city[ftemp]) {
+		if(knight_in_city[ftemp]->win_flag) {
+			win[0] = win[1];
+			win[1] = ftemp;
+		}
+	}
+	if(knight_in_city[ftemp] == NULL && knight_in_city[temp]) {
+		if(knight_in_city[temp]->win_flag) {
+			win[0] = win[1];
+			win[1] = temp;
+		}
+	}
+	if(knight_in_city[temp]) {
+		if(knight_in_city[temp]->win_flag) {
+			command[temp]->life += life;
+			print_time();
+			cout << color_name[temp] << " " << knight_in_city[temp]->name << ' ' << knight_in_city[temp]->number << " earned " << life << " elements for his headquarter" << endl;
+			life = 0;
+		}
+		if(knight_in_city[temp]->name_value == dragon && knight_in_city[temp]->fight_flag) {
+			if(knight_in_city[temp]->win_flag)knight_in_city[temp]->morale += 0.2;
+			else knight_in_city[temp]->morale -= 0.2;
+			knight_in_city[temp]->fight_flag = false;
+		}
+		if(knight_in_city[temp]->win_flag && command[temp]->life >= 8) {
+			knight_in_city[temp]->life += 8;
+			command[temp]->life -= 8;
+		}
+		knight_in_city[temp]->win_flag = false;
+	}
+	if(knight_in_city[ftemp]) {
+		if(knight_in_city[ftemp]->win_flag) {
+			command[ftemp]->life += life;
+			print_time();
+			cout << color_name[ftemp] << " " << knight_in_city[ftemp]->name << ' ' << knight_in_city[ftemp]->number << " earned " << life << " elements for his headquarter" << endl;
+			life = 0;
+		}
+		if(knight_in_city[ftemp]->name_value == dragon && knight_in_city[ftemp]->fight_flag) {
+			if(knight_in_city[ftemp]->win_flag)knight_in_city[ftemp]->morale += 0.2;
+			else knight_in_city[ftemp]->morale -= 0.2;
+			knight_in_city[ftemp]->fight_flag = false;
+		}
+		if(knight_in_city[ftemp]->win_flag && command[ftemp]->life >= 8) {
+			knight_in_city[ftemp]->life += 8;
+			command[ftemp]->life -= 8;
+		}
+		knight_in_city[ftemp]->win_flag = false;
+	}
+	if(knight_in_city[ftemp] == NULL && knight_in_city[temp]) {
+		knight_in_city[temp]->win_flag = false;
+	}
+	if(knight_in_city[temp] == NULL && knight_in_city[ftemp]) {
+		knight_in_city[ftemp]->win_flag = false;
+	}
+	if(win[0] == win[1]) {
+		int old_flag = flag;
+		flag = win[0];
+		if(old_flag != flag) {
+			print_time();
+			cout << color_name[flag] << " flag raised in city " << number << endl;
+		}
+	}
+}
+
+int Knight::min_55() {
+	if(weapon[arrow] && weapon[bomb] && weapon[sword]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has arrow(" << weapon[arrow]->attack_times << "),bomb,sword(" << weapon[sword]->attack << ')' << endl;
+		return 0;
+	}
+	if(weapon[arrow] && weapon[bomb]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has arrow(" << weapon[arrow]->attack_times << "),bomb" << endl;
+		return 0;
+	}
+	if(weapon[arrow] && weapon[sword]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has arrow(" << weapon[arrow]->attack_times << "),sword(" << weapon[sword]->attack << ')' << endl;
+		return 0;
+	}
+	if(weapon[bomb] && weapon[sword]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has bomb,sword(" << weapon[sword]->attack << ')' << endl;
+		return 0;
+	}
+	if(weapon[arrow]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has arrow(" << weapon[arrow]->attack_times << ')' << endl;
+		return 0;
+	}
+	if(weapon[bomb]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has bomb" << endl;
+		return 0;
+	}
+	if(weapon[sword]) {
+		cout << color_name[color] << ' ' << name << ' ' << number << " has sword(" << weapon[sword]->attack << ')' << endl;
+		return 0;
+	}
+	cout << color_name[color] << ' ' << name << ' ' << number << " has no weapon" << endl;
+}
+
+void enter() {//输入数据,初始化
+	hour = -1;
+	minute = 0;
+	cin >> total_life >> total_city >> arrow_attack >> loyal_reduce >> total_minute;
+	command[red] = new Command(red, total_life);
+	command[blue] = new Command(blue, total_life);
+	for(int i = 0; i < 5; i++) {
+		cin >> life_make[i];
+	}
+	for(int i = 0; i < 5; i++) {
+		cin >> attack_knight[i];
+	}
+	for (int i = 0; i < total_city; ++i) {
+		City temp(i + 1);
+		city.push_back(temp);
+	}
+}
+
+int time() { //时间线,发生事件
+	minute = 0;
+	hour++;
+	if(60 * hour + 0 <= total_minute) {//make knight
+		command[red]->min_0();
+		command[blue]->min_0();
+	}
+	minute = 5;
+	if(60 * hour + 5 <= total_minute) {//lion run away
+		vector<City>::iterator it = city.begin();
+		while(it != city.end()) {
+			it->min_5();
+			it++;
+		}
+		int _clolor_ = blue;
+		while(_clolor_) {
+			if(command[_clolor_]->knight && command[_clolor_]->knight->name_value == lion && command[_clolor_]->knight->lion_run()) {
+				print_time();
+				cout << color_name[_clolor_] << ' ' << command[_clolor_]->knight->name << ' ' << command[_clolor_]->knight->number << " ran away" << endl;
+				delete command[_clolor_]->knight;
+				command[_clolor_]->knight = NULL;
+			}
+			_clolor_--;
+		}
+	}
+	minute = 10;
+	if(60 * hour + 10 <= total_minute) {//knight set off
+		min_10();
+		if(command[red]->number_enemy[1] || command[blue]->number_enemy[1])hour = total_minute / 60 + 1;
+	}
+	minute = 20;
+	if(60 * hour + 20 <= total_minute) {//city make life
+		vector<City>::iterator it = city.begin();
+		while(it != city.end()) {
+			it->min_20();
+			it++;
+		}
+	}
+	if(60 * hour + 30 <= total_minute) {//command get life
+		minute = 30;
+		vector<City>::iterator it = city.begin();
+		while(it != city.end()) {
+			it->min_30();
+			it++;
+		}
+	}
+	minute = 35;
+	if(60 * hour + 35 <= total_minute) {//use arrow          debug
+		vector<City>::iterator it = city.begin();
+		while(it != city.end()) {
+			it->min_35();
+			it++;
+		}
+		it = city.begin();
+		while(it != city.end()) {
+			if(it->knight_in_city[red] && it->knight_in_city[red]->name_value == wolf) {
+				if(it->knight_in_city[red]->weapon_[sword]) {
+					it->knight_in_city[red]->weapon[sword] = it->knight_in_city[red]->weapon_[sword];
+					it->knight_in_city[red]->weapon_[sword] = NULL;
+				}
+				if(it->knight_in_city[red]->weapon_[arrow]) {
+					it->knight_in_city[red]->weapon[arrow] = it->knight_in_city[red]->weapon_[arrow];
+					it->knight_in_city[red]->weapon_[arrow] = NULL;
+				}
+				if(it->knight_in_city[red]->weapon_[bomb]) {
+					it->knight_in_city[red]->weapon[bomb] = it->knight_in_city[red]->weapon_[bomb];
+					it->knight_in_city[red]->weapon_[bomb] = NULL;
+				}
+			}
+			if(it->knight_in_city[blue] && it->knight_in_city[blue]->name_value == wolf) {
+				if(it->knight_in_city[blue]->weapon_[sword]) {
+					it->knight_in_city[blue]->weapon[sword] = it->knight_in_city[blue]->weapon_[sword];
+					it->knight_in_city[blue]->weapon_[sword] = NULL;
+				}
+				if(it->knight_in_city[blue]->weapon_[arrow]) {
+					it->knight_in_city[blue]->weapon[arrow] = it->knight_in_city[blue]->weapon_[arrow];
+					it->knight_in_city[blue]->weapon_[arrow] = NULL;
+				}
+				if(it->knight_in_city[blue]->weapon_[bomb]) {
+					it->knight_in_city[blue]->weapon[bomb] = it->knight_in_city[blue]->weapon_[bomb];
+					it->knight_in_city[blue]->weapon_[bomb] = NULL;
+				}
+			}
+			it++;
+		}
+	}
+	minute = 38;
+	if(60 * hour + 38 <= total_minute) {//use bomb           coding...
+		vector<City>::iterator it = city.begin();
+		while(it != city.end()) {
+			it->min_38();
+			it++;
+		}
+	}
+	minute = 40;
+	if(60 * hour + 40 <= total_minute) {//fight
+		vector<City>::iterator it = city.begin();
+		while(it != city.end()) {
+			it->min_40();
+			it++;
+		}
+	}
+	minute = 50;
+	if(60 * hour + 50 <= total_minute) {//report life
+		print_time();
+		command[red]->min_50();
+		print_time();
+		command[blue]->min_50();
+	}
+	minute = 55;
+	if(60 * hour + 55 <= total_minute) {//report weapon
+		vector<City>::iterator it = city.begin();
+
+		while(it != city.end()) {
+			if(it->knight_in_city[red]) {
+				print_time();
+				it->knight_in_city[red]->min_55();
+			}
+			it++;
+		}
+		it = city.begin();
+		if(command[blue]->number_enemy[0]) {
+			print_time();
+			command[blue]->number_enemy[0]->min_55();
+		}
+		if(command[blue]->number_enemy[1]) {
+			print_time();
+			command[blue]->number_enemy[1]->min_55();
+		}
+		if(command[red]->number_enemy[0]) {
+			print_time();
+			command[red]->number_enemy[0]->min_55();
+		}
+		if(command[red]->number_enemy[1]) {
+			print_time();
+			command[red]->number_enemy[0]->min_55();
+		}
+		while(it != city.end()) {
+			if(it->knight_in_city[blue]) {
+				print_time();
+				it->knight_in_city[blue]->min_55();
+			}
+			it++;
+		}
+
+	}
+}
+
+int main() {
+	int n, i = 0;
+	cin >> n;
+	while(n--) {
+		enter();
+		cout << "Case " << ++i << ":\n";
+		while(hour * 60 + minute <= total_minute) {
+			time();
+		}
+	}
 	return 0;
 }
-bool Warrior::Minute_5(){
-	if (name == lion) if (Loyal <= 0){
-		Print_time();
-		cout << Command_Belong_to->colour(true) << " lion " << Num << " ran away\n";
-		return true;
-	}
-	return false;
-}
-void Warrior::Minute_10(bool If_arrive){
-	++Step;
-	if (name == iceman and !(Step % 2)){
-		if (Life < 10) Life = 1;
-		else Life -= 9;
-		Attack += 20;
-	}
-	Print_time();
-	cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num;
-	if (If_arrive)
-		cout << " reached " << Command_Belong_to->colour(false) << " headquarter";
-	else cout << " marched to city " << City_Belong_to->Num();
-	cout << " with " << Life << " elements and force " << Attack << endl;
-}
-void Warrior::Minute_30(int Add_life){
-	Print_time();
-	cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " earned " << Add_life << " elements for his headquarter\n";
-	Command_Belong_to->Minute_30(Add_life);
-}
-void Warrior::arrow_shot(){
-	Print_time();
-	cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " shot";
-	weapon[arrow]->usetime()--;
-	if(!weapon[arrow]->usetime()){delete weapon[arrow]; weapon[arrow] = NULL;}
-}
-void Warrior::Be_shoted(){
-	Life -= arrow_attack;
-	if (Life <= 0){cout << " and killed " << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num;}
-	cout << endl;
-}
-void City::Move(Command *Cp, int i){
-	Cp->Enemy_Move_In(Warrior_In_City[i]);
-	Warrior_In_City[i] = NULL;
-}
-void Warrior::Use_bomb(Warrior *Wp){
-	Print_time();
-	cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " used a bomb and killed " << (Wp->Command_Belong_to)->colour(true) << ' ' << Knight[Wp->name] << ' ' << Wp->Num << endl;
-}
-bool Warrior::bomb(Warrior *Wp, int p){
-	if ((p + Command_Belong_to->colour()) % 2){
-		if (fight(Wp) == -1) {Use_bomb(Wp); return true;}
-	}else
-		if (Wp->fight(this) == 1) {Use_bomb(Wp); return true;}
-	return false;
-}
-void Warrior::Dead(){
-	Print_time();
-	cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " was killed in city " << City_Belong_to->Num() << endl;
-}
-void Warrior::Fight(Warrior *Wp){
-	Warrior *Wp_win = NULL; Warrior *Wp_lose = NULL;
-	l_life = Life; Wp->l_life = Wp->Life;
-	if (Life > 0 and (Wp->Life) > 0){
-		int swatk = 0;
-		if (weapon[sword]) swatk = weapon[sword]->sw_atk();
-		Print_time();
-		cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " attacked " << (Wp->Command_Belong_to)->colour(true) << ' ' << Knight[Wp->name] << ' ' << Wp->Num << " in city " << City_Belong_to->Num() << " with " << Life << " elements and force " << Attack << endl;
-		Wp->Life = Wp->Life - Attack - swatk;
-		if (swatk) if (!weapon[sword]->sword_dull()){delete weapon[sword]; weapon[sword] = NULL;}
-		if (Wp->Life > 0){
-			if (Wp->name == ninja) {City_Belong_to->Flag_Set(-1);Morale_Change();Loyal_Reduce();}
-			else{
-				int E_swatk = 0;
-				if (Wp->weapon[sword]) E_swatk = (Wp->weapon[sword])->sw_atk();
-				Print_time();
-				cout << (Wp->Command_Belong_to)->colour(true) << ' ' << Knight[Wp->name] << ' ' << Wp->Num << " fought back against " << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " in city " << City_Belong_to->Num() <<endl;
-				Life = Life - (Wp->Attack / 2) - E_swatk;
-				if (E_swatk) if(!(Wp->weapon[sword])->sword_dull()){delete Wp->weapon[sword]; Wp->weapon[sword] = NULL;}
-				if (Life > 0) {City_Belong_to->Flag_Set(-1);Morale_Change();Wp->Morale_Change();Loyal_Reduce();Wp->Loyal_Reduce();}
-				else{Wp->If_kill = true;Wp_lose = this;Wp_win = Wp;}
-			}
-		}else{If_kill = true;Wp_win = this;Wp_lose = Wp;}
-	}else{
-		if (Life > 0){Wp->l_life = 0;Wp_win = this;Wp_lose = Wp;}
-		else {l_life = 0;Wp_lose = this;Wp_win = Wp;}
-	}
-	if (Wp_win){Wp_win->account(Wp_lose);}
-	if (name == dragon and Life > 0 and Morale > 0.8){
-		Print_time();
-		cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " yelled in city " << City_Belong_to->Num() << endl;
-	}
-	if (Wp_win){
-		Print_time();
-		cout << (Wp_win->Command_Belong_to)->colour(true) << ' ' << Knight[Wp_win->name] << ' ' << Wp_win->Num << " earned " << City_Belong_to->Life_() << " elements for his headquarter\n";
-		(Wp_win->City_Belong_to)->Flag_Set((Wp_win->Command_Belong_to)->colour());
-	}
-}
-void Warrior::Reward(){
-	if (If_win)
-		if (Command_Belong_to->Life() > 7){
-			Command_Belong_to->Life() -= 8;
-			Life += 8;
-		}
-}
-void Warrior::ADD(int life){Command_Belong_to->Life() += life;}
-void Warrior::Report_weapon(){
-	bool p = false;
-	Print_time();
-	cout << Command_Belong_to->colour(true) << ' ' << Knight[name] << ' ' << Num << " has ";
-	for (int i = 2; i >= 0; --i)
-		if (weapon[i]){
-			if (p) cout << ',';else p = true;
-			cout << Weapons_[i];
-			if (i == 2) cout << '(' << weapon[arrow]->usetime() << ')';
-			if (i == 0) cout << '(' << weapon[sword]->sw_atk() << ')';
-		}
-	if(!p) cout << "no weapon";
-	cout << endl;
-}
+
