@@ -448,6 +448,7 @@ int City::min_30() {
 		life = 0;
 		return 0;
 	}
+	return 0;
 }
 
 void arrow_hurt(int number, Knight* who_arrow, bool again) {
@@ -643,7 +644,7 @@ void City::min_40() {
 		}
 		knight_in_city[ftemp]->win_flag = false;
 	}
-	if(win[0] == win[1]) {
+	if(win[0] == win[1]&&win[0]!=white) {
 		int old_flag = flag;
 		flag = win[0];
 		if(old_flag != flag) {
@@ -683,6 +684,7 @@ int Knight::min_55() {
 		return 0;
 	}
 	cout << color_name[color] << ' ' << name << ' ' << number << " has no weapon" << endl;
+	return 0;
 }
 
 void enter() {//输入数据,初始化
@@ -815,7 +817,6 @@ void time() { //时间线,发生事件
 	minute = 55;
 	if(60 * hour + 55 <= total_minute) {//report weapon
 		vector<City>::iterator it = city.begin();
-
 		while(it != city.end()) {
 			if(it->knight_in_city[red]) {
 				print_time();
@@ -823,7 +824,6 @@ void time() { //时间线,发生事件
 			}
 			it++;
 		}
-		it = city.begin();
 		if(command[blue]->number_enemy[0]) {
 			print_time();
 			command[blue]->number_enemy[0]->min_55();
@@ -840,6 +840,7 @@ void time() { //时间线,发生事件
 			print_time();
 			command[red]->number_enemy[0]->min_55();
 		}
+		it = city.begin();
 		while(it != city.end()) {
 			if(it->knight_in_city[blue]) {
 				print_time();
@@ -847,7 +848,6 @@ void time() { //时间线,发生事件
 			}
 			it++;
 		}
-
 	}
 }
 
