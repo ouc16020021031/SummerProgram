@@ -289,6 +289,10 @@ bool Knight::counterattack(Knight* enemy, City* city) {
 }
 
 bool Knight::yell(int city_number) {
+	if(name_value==dragon){
+			if(win_flag)morale += 0.2;
+			else morale -= 0.2;
+	}
 	if(morale > 0.8) {
 		print_time();
 		cout << color_name[color] << ' ' << name << ' ' << number << " yelled in city " << city_number << endl;
@@ -616,14 +620,14 @@ void City::min_38() {
 			blue_half_attack = knight_in_city[blue]->attack / 2;
 		}
 		if(knight_in_city[red]->weapon[bomb]) {
-			if((knight_in_city[red]->active_flag && knight_in_city[blue]->name_value != ninja && blue_half_attack > knight_in_city[red]->life && red_all_attack < knight_in_city[blue]->life) || ( knight_in_city[red]->active_flag == 0 && blue_all_attack > knight_in_city[red]->life)) {
+			if((knight_in_city[red]->active_flag && knight_in_city[blue]->name_value != ninja && blue_half_attack >= knight_in_city[red]->life && red_all_attack < knight_in_city[blue]->life) || ( knight_in_city[red]->active_flag == 0 && blue_all_attack >= knight_in_city[red]->life)) {
 				bomb_use(knight_in_city[red], knight_in_city[blue]);
 				knight_in_city[red] = NULL;
 				knight_in_city[blue] = NULL;
 			}
 		}
 		if(knight_in_city[blue] && knight_in_city[blue]->weapon[bomb]) {
-			if((knight_in_city[blue]->active_flag && knight_in_city[red]->name_value != ninja && red_half_attack > knight_in_city[blue]->life && blue_all_attack < knight_in_city[red]->life) || (knight_in_city[blue]->active_flag == 0 && red_all_attack > knight_in_city[blue]->life)) {
+			if((knight_in_city[blue]->active_flag && knight_in_city[red]->name_value != ninja && red_half_attack >= knight_in_city[blue]->life && blue_all_attack < knight_in_city[red]->life) || (knight_in_city[blue]->active_flag == 0 && red_all_attack >= knight_in_city[blue]->life)) {
 				bomb_use(knight_in_city[blue], knight_in_city[red]);
 				knight_in_city[blue] = NULL;
 				knight_in_city[red] = NULL;
@@ -686,8 +690,6 @@ void City::min_40() {
 			life = 0;
 		}
 		if(knight_in_city[temp]->name_value == dragon && knight_in_city[temp]->fight_flag) {
-			if(knight_in_city[temp]->win_flag)knight_in_city[temp]->morale += 0.2;
-			else knight_in_city[temp]->morale -= 0.2;
 			knight_in_city[temp]->fight_flag = false;
 		}
 		knight_in_city[temp]->win_flag = false;
